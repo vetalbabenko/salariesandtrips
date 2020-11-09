@@ -4,13 +4,18 @@ import java.util.logging.Logger
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 
+trait Hadoop {
+  def save(data: String, fileName: String = "output.csv"): Unit
+}
 
-class HadoopService(hdfsPath: String) {
+// Wrapper for hadoop file system to correctly save data to HDFS.
+class HadoopService(hdfsPath: String) extends Hadoop {
 
   private val conf = new Configuration()
   conf.set("fs.defaultFS", hdfsPath)
   private val fs = FileSystem.get(conf)
 
+  //Save data to HDFS by given fileName and data
   def save(data: String, fileName: String = "output.csv"): Unit = {
     println(s"Started saving data: $data to hdfs")
     val output = fs.create(new Path(s"/tmp/$fileName"))

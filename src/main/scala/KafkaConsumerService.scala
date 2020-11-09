@@ -5,7 +5,10 @@ import org.apache.kafka.common.serialization.StringDeserializer
 
 import scala.jdk.CollectionConverters._
 
-class KafkaConsumerService(servers: String, topics: List[String], igniteService: IgniteService) {
+// Simple kafka consumer, which consumes records from topic, add them to ignite cache and run aggregation
+// if corresponding message sent
+
+class KafkaConsumerService(servers: String, topics: List[String], igniteService: IgniteService, hadoopService: Hadoop) {
   val properties = new Properties()
   properties.put("bootstrap.servers", servers)
   properties.put("key.deserializer", classOf[StringDeserializer])
@@ -22,10 +25,13 @@ class KafkaConsumerService(servers: String, topics: List[String], igniteService:
       val results = kafkaConsumer.poll(2000).asScala
       results.foreach { record =>
         println(s"Received record ${record.value()}")
-        if (record.value() == "run-agg")
-          igniteService.runAggregation()
-        else
+        if (record.value() == "run-agg") {
+          val aggregatedData = igniteService.runAggregation()
+          hadoopService.save(aggregatedData)
+        }
+        else {
           igniteService.add(record.value())
+        }
       }
     }
   }

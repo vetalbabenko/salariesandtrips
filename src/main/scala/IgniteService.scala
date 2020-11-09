@@ -4,7 +4,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery
 import org.apache.ignite.configuration.IgniteConfiguration
 import org.apache.ignite.{IgniteAtomicSequence, Ignition}
 
-class IgniteService(hadoopService: HadoopService) {
+// Ignite service which manipulates with ignite caches and run aggregation on it.
+class IgniteService() {
 
   val igniteConfig = new IgniteConfiguration().setIgniteInstanceName("SalariesAndTrips")
   val ignite = Ignition.start(igniteConfig)
@@ -14,6 +15,8 @@ class IgniteService(hadoopService: HadoopService) {
   val seqSalary: IgniteAtomicSequence = ignite.atomicSequence("salary", 0, true)
   val seqTrip: IgniteAtomicSequence = ignite.atomicSequence("trip", 0, true)
 
+  // Adding row to cache. Based on row, if it salary or trip row then it should
+  // added to corresponding cache.
   def add(row: String): Unit = {
     val lines = row.split("\n").filter(_.nonEmpty)
     lines.foreach { line =>
@@ -47,7 +50,8 @@ class IgniteService(hadoopService: HadoopService) {
     user.query(new SqlFieldsQuery(s"insert into user_trip (id, passport, age, trip) values ($id, '$passport', '$age', $trip)"))
   }
 
-  def initializeCaches(): Unit = {
+  // Initializes caches
+  private def initializeCaches(): Unit = {
     user.query(
       new SqlFieldsQuery("create table user_salary (id int not null primary key, passport varchar(50), month smallint, salary double precision)")
     )
@@ -56,20 +60,12 @@ class IgniteService(hadoopService: HadoopService) {
     )
   }
 
-  def runAggregation(): Unit = {
+  // Aggregates user trips and saaries.
+  def runAggregation(): String = {
     println(s"Started aggregation")
     val cache = ignite.cache("user")
-    val userSalary =cache.query(new SqlFieldsQuery(
-      "select * from user_salary"
-    ))
-    val userTrip = cache.query(new SqlFieldsQuery(
-      "select * from user_trip"
-    ))
 
-    userSalary.forEach(println)
-    userTrip.forEach(println)
-
-
+    // Use left join to match row which corresponds to user salary and trips.
     val res = cache.query(new SqlFieldsQuery(
       "select ut.age, avg(us.salary), avg(ut.trip) from user_salary as us \n" +
       "LEFT JOIN user_trip as ut ON us.passport = ut.passport GROUP BY ut.age"
@@ -79,7 +75,7 @@ class IgniteService(hadoopService: HadoopService) {
      res.forEach{c =>
       values += "\n" + (0 until res.getColumnsCount).map(idx => c.get(idx)).mkString(",")
     }
-    hadoopService.save(s"$header$values")
     println(s"Finished aggregation")
+    s"$header$values"
   }
 }

@@ -1,3 +1,8 @@
+Pre-requirements:
+-docker, docker-compose, java and scala should be installed on you computer and added to variable path.
+
+
+
 1. Set up a kafka in docker
     - pull docker image: git clone https://github.com/wurstmeister/kafka-docker.git
     - cd cloned project and replace docker-compose.yml with one which located in docker-compose: docker-compose-kafka.yml

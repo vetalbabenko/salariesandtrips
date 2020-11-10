@@ -9,7 +9,7 @@ class IgniteService() {
 
   val igniteConfig = new IgniteConfiguration().setIgniteInstanceName("SalariesAndTrips")
   val ignite = Ignition.start(igniteConfig)
-  val user = ignite.createCache[String, User]("user")
+  val user = ignite.createCache[String, String]("user")
   initializeCaches()
 
   val seqSalary: IgniteAtomicSequence = ignite.atomicSequence("salary", 0, true)

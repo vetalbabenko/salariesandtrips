@@ -21,18 +21,12 @@ class KafkaConsumerService(servers: String, topics: List[String], igniteService:
   kafkaConsumer.subscribe(topics.asJavaCollection)
 
   def consume(): Unit = {
-    while (true) {
-      val results = kafkaConsumer.poll(2000).asScala
-      results.foreach { record =>
-        println(s"Received record ${record.value()}")
-        if (record.value() == "run-agg") {
-          val aggregatedData = igniteService.runAggregation()
-          hadoopService.save(aggregatedData)
-        }
-        else {
-          igniteService.add(record.value())
-        }
-      }
+    val results = kafkaConsumer.poll(2000).asScala
+    results.foreach { record =>
+      println(s"Received record ${record.value()}")
+      igniteService.add(record.value())
     }
+    val aggregatedData = igniteService.runAggregation()
+    hadoopService.save(aggregatedData)
   }
 }

@@ -13,7 +13,7 @@ class KafkaConsumerService(servers: String, topics: List[String], igniteService:
   properties.put("bootstrap.servers", servers)
   properties.put("key.deserializer", classOf[StringDeserializer])
   properties.put("value.deserializer", classOf[StringDeserializer])
-  properties.put("group.id", "group-test")
+  properties.put("group.id", "group-test" + java.util.UUID.randomUUID())
   properties.put("auto.commit.interval.ms", "1000")
   properties.put("auto.offset.reset", "earliest")
 
@@ -21,12 +21,16 @@ class KafkaConsumerService(servers: String, topics: List[String], igniteService:
   kafkaConsumer.subscribe(topics.asJavaCollection)
 
   def consume(): Unit = {
-    val results = kafkaConsumer.poll(2000).asScala
-    results.foreach { record =>
-      println(s"Received record ${record.value()}")
-      igniteService.add(record.value())
+    val records = kafkaConsumer.poll(5000).asScala.toList
+     records match {
+      case records@Seq(_, _*) => records.foreach { record =>
+        println(s"Received record ${record.value()}")
+        igniteService.add(record.value())
+      }
+        consume()
+      case Nil =>
+        val aggregatedData = igniteService.runAggregation()
+        hadoopService.save(aggregatedData)
     }
-    val aggregatedData = igniteService.runAggregation()
-    hadoopService.save(aggregatedData)
   }
 }

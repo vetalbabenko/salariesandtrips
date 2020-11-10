@@ -12,4 +12,5 @@ object ConsumerServiceMain extends App {
   kafkaProducerService.writeFile(Source.fromResource("sample.csv").getLines().toList)
   consumerService.consume()
 
+
 }
